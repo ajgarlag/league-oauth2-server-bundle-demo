@@ -1,0 +1,73 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}OAuth2 Authorization Decision{% endblock %}
+
+{% block main %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h1 class="card-title mb-0 display-6">🆔 Authorization Request</h1>
+                </div>
+                <div class="card-body p-5">
+                    <div class="mb-4">
+                        <h2 class="card-subtitle mb-3">Client Information</h2>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Client ID:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <code>{{ client.identifier }}</code>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Client Name:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                {{ client.name }}
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-sm-4">
+                                <strong>Redirect URI:</strong>
+                            </div>
+                            <div class="col-sm-8">
+                                <code>{{ redirect_uri }}</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if scopes|length > 0 %}
+                        <div class="mb-4">
+                            <h5>Requested Permissions:</h5>
+                            <div class="list-group">
+                                {% for scope in scopes %}
+                                    <div class="list-group-item">
+                                        <small class="badge bg-info">{{ scope }}</small>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="alert alert-warning" role="alert">
+                        <strong>⚠️ Review Request:</strong> This application is requesting access to your account. Please review the details and decide whether to allow or deny access.
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ deny_uri }}" data-turbo="false" class="btn btn-outline-secondary btn-lg">
+                            👎 Deny
+                        </a>
+                        <a href="{{ allow_uri }}" data-turbo="false" class="btn btn-primary btn-lg">
+                            👍 Allow
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
