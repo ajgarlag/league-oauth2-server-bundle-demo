@@ -1,0 +1,56 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Login{% endblock %}
+
+{% block page_title %}Login{% endblock %}
+
+{% block main %}
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5">
+                    <h1 class="card-title text-center mb-4">🔐 Login</h1>
+
+                    {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <strong>Error:</strong> {{ error.messageKey|trans(error.messageData, 'security') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">🪪 Email</label>
+                            <input type="email" class="form-control form-control-lg" list="in-memory-users" value="{{ last_username }}" name="_username" id="username" required autofocus>
+                            <datalist id="in-memory-users">
+                                <option>admin@example.com</option>
+                                <option>user1@example.com</option>
+                                <option>user2@example.com</option>
+                            </datalist>
+                            <small class="form-text text-muted d-block mt-2">Sample users available in the list</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">🔑 Password</label>
+                            <input type="password" class="form-control form-control-lg" value="foobar" name="_password" id="password" autocomplete="current-password" required>
+                            <small class="form-text text-muted d-block mt-2">Test password: foobar</small>
+                        </div>
+
+                        <input type="hidden" name="_csrf_token" data-controller="csrf-protection" value="{{ csrf_token('authenticate') }}">
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                            🔐 Login
+                        </button>
+                    </form>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" name="_remember_me" id="_remember_me">
+                        <label class="form-check-label" for="_remember_me">
+                            🍪 Remember me
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin panel{% endblock %}
+
+{% block main %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-body p-5 text-center">
+                    <div class="mb-4">
+                        <div style="font-size: 4rem; color: #28a745;">✅</div>
+                    </div>
+
+                    <h1 class="card-title mb-3">Admin Access Granted</h1>
+                    <h2 class="card-subtitle text-muted mb-4">You have administrator permissions</h2>
+
+                    <div class="alert alert-success" role="alert">
+                        <strong>Success!</strong> You are logged in with admin privileges and have access to this restricted area.
+                    </div>
+
+                    <p class="text-muted">
+                        This admin panel is a protected resource that only users with administrator role can access.
+                    </p>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary btn-lg">
+                            ← Back to profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
