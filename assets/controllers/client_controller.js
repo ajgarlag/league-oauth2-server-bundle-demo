@@ -3,6 +3,11 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
 
     tokenExpirationInterval = null;
+    devicePollTimeout = null;
+    deviceAuthorizationData = null;
+    deviceAuthorizationIntervalMs = 5000;
+    deviceAuthorizationExpiresAt = null;
+    deviceCountdownInterval = null;
 
     static targets = [
         'clientId',
@@ -20,7 +25,13 @@ export default class extends Controller {
         'passwordDialog',
         'passwordForm',
         'dialogUsername',
-        'dialogPassword'
+        'dialogPassword',
+        'deviceDialog',
+        'deviceResult',
+        'deviceInstructions',
+        'deviceCountdown',
+        'deviceStatus',
+        'deviceCancelButton'
     ];
 
     static grantTypes = {
@@ -244,6 +255,87 @@ export default class extends Controller {
         window.location.href = authUrl;
     }
 
+    authorizeDevice() {
+        if (!this.validateCredentials()) return;
+
+        this.saveCredentials();
+        this.deviceResultTarget.innerHTML = '';
+        this.deviceInstructionsTarget.innerHTML = '';
+        this.deviceStatusTarget.innerHTML = '';
+        this.deviceCountdownTarget.innerHTML = '';
+
+        this.deviceResultTarget.innerHTML = '<p>⏳ Requesting device authorization...</p>';
+        const deviceUrl = new URL(this.getServerUrl());
+        deviceUrl.pathname = '/oauth2/device-code';
+
+        const body = new URLSearchParams();
+        body.append('client_id', this.clientIdTarget.value.trim());
+        const scopes = this.getScopes();
+        if (scopes.length) {
+            body.append('scope', scopes.join(' '));
+        }
+        const clientSecret = this.clientSecretTarget.value.trim();
+        if (clientSecret) {
+            body.append('client_secret', clientSecret);
+        }
+
+        fetch(deviceUrl.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().catch(() => ({})).then(errorData => {
+                        const description = errorData.error_description || `HTTP ${response.status}`;
+                        throw new Error(description);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data.device_code || !data.user_code || !data.verification_uri) {
+                    throw new Error('Missing fields in device authorization response.');
+                }
+
+                this.deviceAuthorizationData = {
+                    device_code: data.device_code,
+                    interval: (data.interval || 5) * 1000
+                };
+                this.deviceAuthorizationIntervalMs = this.deviceAuthorizationData.interval;
+                this.deviceAuthorizationExpiresAt = data.expires_in ? Date.now() + (data.expires_in * 1000) : null;
+
+                const verificationUri = this.escapeHtml(data.verification_uri);
+                const verificationUriComplete = data.verification_uri_complete ? this.escapeHtml(data.verification_uri_complete) : null;
+                const userCode = this.escapeHtml(data.user_code);
+
+                const instructionsHtml = `
+                    <div class="alert alert-info">
+                        <p class="mb-2"><strong>Step 1:</strong> Visit <a href="${verificationUri}" target="_blank" rel="noopener noreferrer" class="alert-link">${verificationUri}</a></p>
+                        <p class="mb-2"><strong>Step 2:</strong> Enter the user code:</p>
+                        <div class="text-center my-3">
+                            <mark style="font-size: 1.5rem; padding: 0.5rem 1rem;">${userCode}</mark>
+                        </div>
+                        ${verificationUriComplete ? `<p class="mb-0"><strong>Shortcut:</strong> <a href="${verificationUriComplete}" target="_blank" rel="noopener noreferrer" class="alert-link">Use the direct verification link</a></p>` : ''}
+                    </div>
+                `;
+
+                this.deviceResultTarget.innerHTML = '<div class="alert alert-success mb-0">✅ Device authorization started. Follow the instructions below.</div>';
+                this.deviceInstructionsTarget.innerHTML = instructionsHtml;
+                this.deviceStatusTarget.innerHTML = '<p class="mb-0">⏳ Waiting for you to authorize the device...</p>';
+                if (this.hasDeviceCancelButtonTarget) {
+                    this.deviceCancelButtonTarget.disabled = false;
+                }
+
+                this.startDeviceCountdown();
+                this.scheduleDevicePolling(this.deviceAuthorizationIntervalMs);
+            })
+            .catch(error => {
+                this.resetDeviceAuthorizationUI();
+                this.deviceResultTarget.innerHTML = `<div class="alert alert-danger mb-0">❌ Device authorization failed: ${this.escapeHtml(error.message)}</div>`;
+            });
+    }
+
     buildAuthorizationUrl(options = {}) {
         const authUrl = new URL(this.getServerUrl());
         authUrl.pathname = '/oauth2/authorize';
@@ -315,6 +407,243 @@ export default class extends Controller {
             .catch(error => {
                 this.setResultError('clientCredentials', error.message);
             });
+    }
+
+    cancelDeviceAuthorization() {
+        this.resetDeviceAuthorizationUI();
+        // Cerrar el modal
+        if (this.hasDeviceDialogTarget) {
+            const modal = bootstrap.Modal.getInstance(this.deviceDialogTarget);
+            if (modal) {
+                modal.hide();
+            }
+        }
+    }
+
+    handleDeviceDialogShow() {
+        // Iniciar autorización automáticamente al abrir el modal
+        this.authorizeDevice();
+    }
+
+    handleDeviceDialogClose() {
+        // Cancelar la autorización si está en curso
+        if (this.deviceAuthorizationData) {
+            this.resetDeviceAuthorizationUI();
+        }
+    }
+
+    openPasswordDialog() {
+        // Validar credenciales antes de abrir el modal
+        if (!this.validateCredentials()) {
+            return;
+        }
+
+        // Abrir el modal programáticamente
+        const modal = new bootstrap.Modal(this.passwordDialogTarget);
+        modal.show();
+    }
+
+    openDeviceDialog() {
+        // Validar credenciales antes de abrir el modal
+        if (!this.validateCredentials()) {
+            return;
+        }
+
+        // Abrir el modal programáticamente
+        const modal = new bootstrap.Modal(this.deviceDialogTarget);
+        modal.show();
+    }
+
+    pollDeviceToken() {
+        if (!this.deviceAuthorizationData) {
+            return;
+        }
+
+        if (this.deviceAuthorizationExpiresAt && Date.now() >= this.deviceAuthorizationExpiresAt) {
+            this.handleDeviceAuthorizationError('⏱️ Device code expired', 'The verification code has expired. Please close this dialog and try again.');
+            return;
+        }
+
+        const tokenUrl = new URL(this.getServerUrl());
+        tokenUrl.pathname = '/oauth2/token';
+
+        const body = new URLSearchParams();
+        body.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
+        body.append('device_code', this.deviceAuthorizationData.device_code);
+        body.append('client_id', this.clientIdTarget.value.trim());
+        const clientSecret = this.clientSecretTarget.value.trim();
+        if (clientSecret) {
+            body.append('client_secret', clientSecret);
+        }
+
+        fetch(tokenUrl.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: body.toString()
+        })
+            .then(async response => {
+                if (response.ok) {
+                    return { success: true, data: await response.json() };
+                }
+
+                const errorPayload = await response.json().catch(() => ({}));
+                return { success: false, status: response.status, error: errorPayload };
+            })
+            .then(result => {
+                if (result.success) {
+                    this.storeToken(result.data);
+                    this.deviceResultTarget.innerHTML = '<div class="alert alert-success mb-0">✅ Device authorized successfully! Access token received.</div>';
+                    this.deviceStatusTarget.innerHTML = '';
+                    this.deviceInstructionsTarget.innerHTML = '';
+                    this.resetDeviceAuthorizationUI();
+                    this.displayStoredToken();
+
+                    // Close the modal
+                    if (this.hasDeviceDialogTarget) {
+                        const modal = bootstrap.Modal.getInstance(this.deviceDialogTarget);
+                        if (modal) {
+                            modal.hide();
+                        }
+                    }
+                    return;
+                }
+
+                const errorCode = result.error?.error;
+                switch (errorCode) {
+                    case 'authorization_pending':
+                        this.deviceStatusTarget.innerHTML = '<p>⏳ Waiting for user confirmation...</p>';
+                        this.scheduleDevicePolling(this.deviceAuthorizationIntervalMs);
+                        break;
+                    case 'slow_down':
+                        this.deviceAuthorizationIntervalMs += 5000;
+                        this.deviceStatusTarget.innerHTML = '<p>🐢 Received slow_down response. Polling less frequently...</p>';
+                        this.scheduleDevicePolling(this.deviceAuthorizationIntervalMs);
+                        break;
+                    case 'access_denied':
+                    case 'authorization_declined':
+                        this.handleDeviceAuthorizationError('🚫 Access Denied', 'The user rejected the authorization request.');
+                        break;
+                    case 'expired_token':
+                    case 'expired_token_hint':
+                    case 'expired_device_code':
+                        this.handleDeviceAuthorizationError('⏱️ Code Expired', 'The verification code has expired. Please close this dialog and try again.');
+                        break;
+                    default:
+                        const description = result.error?.error_description || 'Unknown error while polling for token.';
+                        this.handleDeviceAuthorizationError('❌ Error', description);
+                        break;
+                }
+            })
+            .catch(error => {
+                this.deviceStatusTarget.innerHTML = `<p>⚠️ Network issue while polling: ${this.escapeHtml(error.message)}. Retrying...</p>`;
+                this.scheduleDevicePolling(this.deviceAuthorizationIntervalMs);
+            });
+    }
+
+    handleDeviceAuthorizationError(title, message) {
+        // Detener polling y cuenta atrás
+        this.clearDevicePolling();
+        this.clearDeviceCountdown();
+        
+        // Limpiar estado de autorización
+        this.deviceAuthorizationData = null;
+        this.deviceAuthorizationIntervalMs = 5000;
+        this.deviceAuthorizationExpiresAt = null;
+        
+        // Mostrar mensaje de error
+        this.deviceResultTarget.innerHTML = `<div class="alert alert-danger mb-0"><strong>${this.escapeHtml(title)}</strong><br>${this.escapeHtml(message)}</div>`;
+        this.deviceInstructionsTarget.innerHTML = '';
+        this.deviceCountdownTarget.innerHTML = '';
+        this.deviceStatusTarget.innerHTML = '';
+        
+        // Deshabilitar botón de cancelar
+        if (this.hasDeviceCancelButtonTarget) {
+            this.deviceCancelButtonTarget.disabled = true;
+        }
+    }
+
+    scheduleDevicePolling(delay) {
+        this.clearDevicePolling();
+        this.devicePollTimeout = setTimeout(() => this.pollDeviceToken(), delay);
+    }
+
+    clearDevicePolling() {
+        if (this.devicePollTimeout) {
+            clearTimeout(this.devicePollTimeout);
+            this.devicePollTimeout = null;
+        }
+    }
+
+    clearDeviceCountdown() {
+        if (this.deviceCountdownInterval) {
+            clearInterval(this.deviceCountdownInterval);
+            this.deviceCountdownInterval = null;
+        }
+    }
+
+    startDeviceCountdown() {
+        this.clearDeviceCountdown();
+
+        if (!this.deviceAuthorizationExpiresAt || !this.hasDeviceCountdownTarget) {
+            return;
+        }
+
+        const updateCountdown = () => {
+            const now = Date.now();
+            const remainingMs = this.deviceAuthorizationExpiresAt - now;
+
+            if (remainingMs <= 0) {
+                this.deviceCountdownTarget.innerHTML = '<div class="alert alert-danger mb-0">⏱️ Code expired!</div>';
+                this.clearDeviceCountdown();
+                return;
+            }
+
+            const remainingSeconds = Math.ceil(remainingMs / 1000);
+            const minutes = Math.floor(remainingSeconds / 60);
+            const seconds = remainingSeconds % 60;
+
+            let timeString;
+            if (minutes > 0) {
+                timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                timeString = `${seconds}s`;
+            }
+
+            let alertClass = 'alert-info';
+            if (remainingSeconds <= 30) {
+                alertClass = 'alert-danger';
+            } else if (remainingSeconds <= 60) {
+                alertClass = 'alert-warning';
+            }
+
+            this.deviceCountdownTarget.innerHTML = `<div class="alert ${alertClass} mb-0">⏱️ Code expires in: <strong>${timeString}</strong></div>`;
+        };
+
+        updateCountdown();
+        this.deviceCountdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    resetDeviceAuthorizationUI() {
+        this.clearDevicePolling();
+        this.clearDeviceCountdown();
+        this.deviceAuthorizationData = null;
+        this.deviceAuthorizationIntervalMs = 5000;
+        this.deviceAuthorizationExpiresAt = null;
+        if (this.hasDeviceInstructionsTarget) {
+            this.deviceInstructionsTarget.innerHTML = '';
+        }
+        if (this.hasDeviceCountdownTarget) {
+            this.deviceCountdownTarget.innerHTML = '';
+        }
+        if (this.hasDeviceResultTarget) {
+            this.deviceResultTarget.innerHTML = '';
+        }
+        if (this.hasDeviceStatusTarget) {
+            this.deviceStatusTarget.innerHTML = '';
+        }
+        if (this.hasDeviceCancelButtonTarget) {
+            this.deviceCancelButtonTarget.disabled = true;
+        }
     }
 
     buildPasswordCredentialsBody(username, password) {

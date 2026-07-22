@@ -5,6 +5,8 @@ league_oauth2_server:
         encryption_key: '%env(resolve:OAUTH_ENCRYPTION_KEY)%'
         enable_password_grant: true
         enable_implicit_grant: true
+        enable_device_code_grant: true
+        device_code_verification_uri: '/oauth2/device-verify'
     resource_server:
         public_key: '%env(resolve:OAUTH_PUBLIC_KEY)%'
     scopes:

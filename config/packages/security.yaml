@@ -43,6 +43,7 @@ security:
     access_control:
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/profile, roles: ROLE_USER }
+        - { path: ^/oauth2/device-code, roles: PUBLIC_ACCESS }
         - { path: ^/oauth2/token, roles: PUBLIC_ACCESS }
         - { path: ^/oauth2, roles: IS_AUTHENTICATED_FULLY }
 
