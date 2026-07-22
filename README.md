@@ -33,13 +33,19 @@ Getting started
 
 1. Start the local server (example):
 
+    If you have Symfony CLI installed, you can use:
+    ```bash
+    symfony serve
+    ```
+
+    Alternatively, you can use the built-in PHP server:
     ```bash
     php -S 127.0.0.1:8000 -t public
     ```
 
 Using the demo client
 
-- Open `/client` in your browser.
+- Open `http://127.0.0.1:8000/client` in your browser.
 - Create a new OAuth2 client using the command provided in the UI.
 - Fill in the Client ID and Client Secret created earlier.
 - Test the flows using the buttons in the UI.
