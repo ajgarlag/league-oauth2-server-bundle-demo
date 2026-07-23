@@ -1,0 +1,175 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\SingleCommandApplication;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Filesystem\Filesystem;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+final class WasmBuildTool
+{
+    public function __construct(
+        private readonly string $projectRoot,
+        private readonly Filesystem $filesystem,
+    ) {}
+
+    public function run(SymfonyStyle $io): void
+    {
+        $runtimeRoot = $this->projectRoot . '/runtime/filesystem';
+        $runtimeWwwRoot = $runtimeRoot . '/www';
+        $distRoot = $this->projectRoot . '/dist';
+
+        $io->section('Preparing WASM filesystem');
+        $this->filesystem->remove($runtimeRoot);
+        $this->filesystem->mkdir($runtimeWwwRoot);
+
+        $io->text('Compiling Symfony asset map...');
+        $this->runCommand([
+            PHP_BINARY,
+            'bin/console',
+            'asset-map:compile',
+            '--env=prod',
+            '--no-debug',
+        ], $this->projectRoot);
+
+        foreach (['assets', 'public', 'vendor', 'config', 'src', 'templates', 'translations'] as $directory) {
+            $sourcePath = $this->projectRoot . '/' . $directory;
+            if (!is_dir($sourcePath)) {
+                continue;
+            }
+
+            $this->filesystem->mirror($sourcePath, $runtimeWwwRoot . '/' . $directory);
+            $io->text(sprintf('Copied %s', $directory));
+        }
+
+        foreach (['composer.json', 'importmap.php'] as $file) {
+            $sourcePath = $this->projectRoot . '/' . $file;
+            if (!is_file($sourcePath)) {
+                continue;
+            }
+
+            $this->filesystem->copy($sourcePath, $runtimeWwwRoot . '/' . $file, true);
+            $io->text(sprintf('Copied %s', $file));
+        }
+
+        foreach (glob($this->projectRoot . '/.env*') ?: [] as $envFilePath) {
+            if (!is_file($envFilePath)) {
+                continue;
+            }
+
+            $filename = basename($envFilePath);
+            $this->filesystem->copy($envFilePath, $runtimeWwwRoot . '/' . $filename, true);
+            $io->text(sprintf('Copied %s', $filename));
+        }
+
+        $this->filesystem->mkdir([$runtimeWwwRoot . '/var/cache', $runtimeWwwRoot . '/var/log']);
+        $this->filesystem->remove([
+            $runtimeRoot . '/filesystem.json',
+            $runtimeRoot . '/filesystem.json.gz',
+            $runtimeRoot . '/files.json',
+            $runtimeRoot . '/www.zip',
+        ]);
+
+        $io->text('Creating runtime archive www.zip...');
+        $this->runCommand(['zip', '-qry', 'www.zip', 'www'], $runtimeRoot);
+
+        $zipPath = $runtimeRoot . '/www.zip';
+        $zipBytes = file_get_contents($zipPath);
+        if ($zipBytes === false) {
+            throw new RuntimeException('Cannot read generated www.zip');
+        }
+
+        $sha256 = hash('sha256', $zipBytes);
+        $manifest = [
+            'version' => 1,
+            'generatedAt' => gmdate('c'),
+            'packageFile' => 'www.zip',
+            'installRoot' => '/persist',
+            'appRoot' => '/persist/www',
+            'docroot' => '/persist/www/public',
+            'versionTag' => $sha256,
+            'sha256' => $sha256,
+            'sizeBytes' => strlen($zipBytes),
+            'worker' => [
+                'prewarmOnActivate' => true,
+                'debugRequestLog' => false,
+                'excludedRequestPathPrefixes' => ['/runtime/'],
+                'excludedRequestPaths' => ['/service-worker.mjs'],
+                'wasmAssetCachePrefix' => 'php-wasm-assets',
+            ],
+        ];
+
+        $encodedManifest = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        if ($encodedManifest === false) {
+            throw new RuntimeException('Cannot encode runtime manifest');
+        }
+
+        $this->filesystem->dumpFile($runtimeRoot . '/manifest.json', $encodedManifest . "\n");
+
+        $io->section('Building distributable bundle');
+        $this->filesystem->remove($distRoot);
+        $this->filesystem->mkdir($distRoot);
+
+        $io->text('Copying public assets...');
+        $this->filesystem->mirror($this->projectRoot . '/public', $distRoot);
+
+        foreach (glob($distRoot . '/*.php') ?: [] as $phpEntryPoint) {
+            $this->filesystem->remove($phpEntryPoint);
+        }
+
+        $wasmSourcePath = $this->projectRoot . '/wasm';
+        if (is_dir($wasmSourcePath)) {
+            $io->text('Copying WASM files...');
+            foreach (glob($wasmSourcePath . '/*') ?: [] as $wasmFile) {
+                if (is_file($wasmFile)) {
+                    $filename = basename($wasmFile);
+                    $this->filesystem->copy($wasmFile, $distRoot . '/' . $filename, true);
+                }
+            }
+        }
+
+        $distRuntimeRoot = $distRoot . '/runtime/filesystem';
+        $this->filesystem->mkdir($distRuntimeRoot);
+        $this->filesystem->copy($runtimeRoot . '/manifest.json', $distRuntimeRoot . '/manifest.json', true);
+        $this->filesystem->copy($runtimeRoot . '/www.zip', $distRuntimeRoot . '/www.zip', true);
+
+        $io->success(sprintf('Build completed at %s', $distRoot));
+        $io->text(sprintf('Runtime version tag: %s', $sha256));
+        $io->info('Serve with "php -S 127.0.0.1:8000 -t dist"');
+    }
+
+    private function runCommand(array $parts, string $cwd): void
+    {
+        $command = implode(' ', array_map('escapeshellarg', $parts));
+        $fullCommand = sprintf('cd %s && %s', escapeshellarg($cwd), $command);
+
+        passthru($fullCommand, $exitCode);
+        if ($exitCode !== 0) {
+            throw new RuntimeException(sprintf('Command failed (%d): %s', $exitCode, $command));
+        }
+    }
+}
+
+$tool = new WasmBuildTool(dirname(__DIR__), new Filesystem());
+
+(new SingleCommandApplication())
+    ->setName('build')
+    ->setDescription('Build dist bundle for php-cgi-wasm runtime.')
+    ->setCode(static function (InputInterface $input, OutputInterface $output) use ($tool): int {
+        $io = new SymfonyStyle($input, $output);
+
+        try {
+            $tool->run($io);
+            return Command::SUCCESS;
+        } catch (Throwable $e) {
+            $io->error($e->getMessage());
+            return Command::FAILURE;
+        }
+    })
+    ->run();
