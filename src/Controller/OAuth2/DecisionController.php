@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Controller;
+namespace App\Controller\OAuth2;
 
 use App\EventSubscriber\SignedAuthorizationRequestSubscriber;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 /**
  * @author Antonio J. García Lagar <aj@garcialagar.es>
  */
-final class OAuth2Controller extends AbstractController
+final class DecisionController extends AbstractController
 {
     public function __construct(
         private readonly UriSigner $uriSigner,

@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}OAuth2 Device Verification{% endblock %}
+
+{% block main %}
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h1 class="card-title mb-0 display-6">🆔 Device Verification Request</h1>
+                </div>
+                <div class="card-body p-5">
+                    {{ form_start(form)}}
+                    {{ form_errors(form) }}
+                        {{ form_row(form.userCode, {
+                            'label': 'Enter the User Code displayed on your device:',
+                            'attr': {'placeholder': 'User Code'}
+                        }) }}
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Verify Device</button>
+                        </div>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

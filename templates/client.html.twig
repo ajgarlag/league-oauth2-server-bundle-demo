@@ -31,6 +31,7 @@
     --grant-type=implicit \
     --grant-type=password \
     --grant-type=client_credentials \
+    --grant-type=urn:ietf:params:oauth:grant-type:device_code \
     --grant-type=refresh_token \
     --scope=email \
     --scope=profile</code></pre>
@@ -39,7 +40,7 @@
                                 <li><strong>Client ID:</strong> Copy this to the "Client ID" field below</li>
                                 <li><strong>Client Secret:</strong> Copy this to the "Client Secret" field below</li>
                             </ul>
-                            <p class="text-muted small"><strong>Note:</strong> The client credentials are automatically saved and restored in your browser's sessionStorage (per-tab storage). The <code>--grant-type=refresh_token</code> is required to enable token refreshing.</p>
+                            <p class="text-muted small"><strong>Note:</strong> The client credentials are automatically saved and restored in your browser's sessionStorage (per-tab storage). The <code>--grant-type=refresh_token</code> is required to enable token refreshing. The <code>--grant-type=device_code</code> enables the Device Authorization Grant.</p>
                         </div>
                     </div>
 
@@ -83,7 +84,8 @@
                                 <button type="button" class="btn btn-primary" data-turbo="false" {{ stimulus_action('client', 'authorizeCodePkce', 'click') }}>🔒 Authorize (Code + PKCE)</button>
                                 <button type="button" class="btn btn-primary" data-turbo="false" {{ stimulus_action('client', 'authorizeImplicit', 'click') }}>🔓 Authorize (Implicit)</button>
                                 <button type="button" class="btn btn-primary" data-turbo="false" {{ stimulus_action('client', 'authorizeClientCredentials', 'click') }}>🤖 Client Credentials</button>
-                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#passwordDialog">🔑 Password Credentials</button>
+                                <button type="button" class="btn btn-primary" {{ stimulus_action('client', 'openPasswordDialog', 'click') }}>🔑 Password Credentials</button>
+                                <button type="button" class="btn btn-primary" {{ stimulus_action('client', 'openDeviceDialog', 'click') }}>🖥️ Device Authorization</button>
                             </div>
                             <div class="mt-3" {{ stimulus_target('client', 'result') }}></div>
                         </div>
@@ -150,6 +152,27 @@
                             <button type="button" class="btn btn-secondary" name="action" value="cancel" data-bs-dismiss="modal">❌ Cancel</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Authorization Modal -->
+        <div class="modal fade" id="deviceDialog" tabindex="-1" aria-labelledby="deviceDialogLabel" aria-hidden="true" {{ stimulus_target('client', 'deviceDialog') }} {{ stimulus_action('client', 'handleDeviceDialogShow', 'show.bs.modal') }} {{ stimulus_action('client', 'handleDeviceDialogClose', 'hide.bs.modal') }}>
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title" id="deviceDialogLabel">🖥️ Device Authorization</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3" {{ stimulus_target('client', 'deviceResult') }}></div>
+                        <div class="mb-3" {{ stimulus_target('client', 'deviceInstructions') }}></div>
+                        <div class="mb-3" {{ stimulus_target('client', 'deviceCountdown') }}></div>
+                        <div class="text-muted" {{ stimulus_target('client', 'deviceStatus') }}></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" disabled data-bs-dismiss="modal" {{ stimulus_action('client', 'cancelDeviceAuthorization', 'click') }} {{ stimulus_target('client', 'deviceCancelButton') }}>✋ Cancel</button>
+                    </div>
                 </div>
             </div>
         </div>
