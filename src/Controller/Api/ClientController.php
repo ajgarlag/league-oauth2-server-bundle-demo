@@ -11,6 +11,7 @@ use League\Bundle\OAuth2ServerBundle\ValueObject\RedirectUri;
 use League\Bundle\OAuth2ServerBundle\ValueObject\Scope;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -22,6 +23,10 @@ final class ClientController extends AbstractController
         ClientManagerInterface $clientManager,
     ): Response {
         $client = $clientManager->find($clientCredentialsUser->getUserIdentifier());
+
+        if (null === $client) {
+            throw new ServiceUnavailableHttpException();
+        }
 
         return $this->json([
             'identifier' => $client->getIdentifier(),

@@ -1,0 +1,13 @@
+includes:
+    - phpstan-baseline.neon
+    - vendor/phpstan/phpstan/conf/bleedingEdge.neon
+    - vendor/phpstan/phpstan-symfony/extension.neon
+
+parameters:
+    level: 10
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/

@@ -55,7 +55,7 @@ final class DecisionController extends AbstractController
         ]);
     }
 
-    private function buildDecidedUri(Request $request, bool $allowed)
+    private function buildDecidedUri(Request $request, bool $allowed): string
     {
         $currentQuery = $request->query->all();
         $decidedQuery = array_merge($currentQuery, [SignedAuthorizationRequestSubscriber::ATTRIBUTE_DECISION => $this->buildDecisionValue($allowed)]);

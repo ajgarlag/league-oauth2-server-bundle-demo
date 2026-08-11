@@ -9,10 +9,14 @@ use League\Bundle\OAuth2ServerBundle\OAuth2Events;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 class UserCredentialsSubscriber implements EventSubscriberInterface
 {
+    /**
+     * @param UserProviderInterface<UserInterface> $userProvider
+     */
     public function __construct(
         private readonly UserProviderInterface $userProvider,
         private readonly UserPasswordHasherInterface $userPasswordHasher,
@@ -21,9 +25,7 @@ class UserCredentialsSubscriber implements EventSubscriberInterface
 
     public function __invoke(UserResolveEvent $event): void
     {
-        if (null === $user = $this->userProvider->loadUserByIdentifier($event->getUsername())) {
-            return;
-        }
+        $user = $this->userProvider->loadUserByIdentifier($event->getUsername());
 
         if (!$user instanceof PasswordAuthenticatedUserInterface) {
             return;

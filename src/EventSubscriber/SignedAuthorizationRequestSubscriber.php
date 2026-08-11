@@ -44,7 +44,7 @@ class SignedAuthorizationRequestSubscriber implements EventSubscriberInterface
         $event->resolveAuthorization($this->isAuthorizationAllowed($request));
     }
 
-    private function canResolveAuthorizationRequest(AuthorizationRequestResolveEvent $event, Request $request)
+    private function canResolveAuthorizationRequest(AuthorizationRequestResolveEvent $event, Request $request): bool
     {
         if (!$request->query->has(self::ATTRIBUTE_DECISION)) {
             return false;
@@ -94,7 +94,7 @@ class SignedAuthorizationRequestSubscriber implements EventSubscriberInterface
 
     private function isAuthorizationAllowed(Request $request): bool
     {
-        return self::ATTRIBUTE_DECISION_ALLOW === $request->get(self::ATTRIBUTE_DECISION);
+        return self::ATTRIBUTE_DECISION_ALLOW === $request->query->getString(self::ATTRIBUTE_DECISION);
     }
 
     public function redirectToDecisionRoute(AuthorizationRequestResolveEvent $event): void

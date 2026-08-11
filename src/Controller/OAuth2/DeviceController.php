@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Controller\OAuth2;
 
-use App\EventSubscriber\SignedAuthorizationRequestSubscriber;
 use League\Bundle\OAuth2ServerBundle\Converter\UserConverterInterface;
 use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Manager\DeviceCodeManagerInterface;
 use League\OAuth2\Server\AuthorizationServer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormError;
+use Symfony\Component\Form\SubmitButton;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,11 +33,9 @@ final class DeviceController extends AbstractController
 {
     public function __construct(
         private readonly UriSigner $uriSigner,
-        private readonly ClientManagerInterface $clientManager,
         private readonly DeviceCodeManagerInterface $deviceCodeManager,
         private readonly UserConverterInterface $userConverter,
         private readonly AuthorizationServer $authorizationServer,
-        private readonly string $authorizationRoute = 'oauth2_authorize',
     ) {
     }
 
@@ -57,7 +54,9 @@ final class DeviceController extends AbstractController
         ;
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (null !== $deviceCode = $this->deviceCodeManager->findByUserCode($form->get('userCode')->getData())) {
+            $userCode = $form->get('userCode')->getData();
+            \assert(is_string($userCode));
+            if (null !== $deviceCode = $this->deviceCodeManager->findByUserCode($userCode)) {
                 return new RedirectResponse(
                     $this->uriSigner->sign(
                         $this->generateUrl('oauth2_device_decide', [
@@ -112,10 +111,13 @@ final class DeviceController extends AbstractController
         ;
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $allowButton = $form->get('allow');
+            \assert($allowButton instanceof SubmitButton);
+
             $this->authorizationServer->completeDeviceAuthorizationRequest(
                 $deviceCodeId,
                 $this->userConverter->toLeague($user)->getIdentifier(),
-                $form->get('allow')->isClicked(),
+                $allowButton->isClicked(),
             );
 
             return new RedirectResponse(
