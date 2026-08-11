@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller\OAuth2;
 
 use League\Bundle\OAuth2ServerBundle\Converter\UserConverterInterface;
-use League\Bundle\OAuth2ServerBundle\Manager\ClientManagerInterface;
 use League\Bundle\OAuth2ServerBundle\Manager\DeviceCodeManagerInterface;
 use League\OAuth2\Server\AuthorizationServer;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

@@ -14,7 +14,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted(new Expression('is_granted("ROLE_OAUTH2_EMAIL") and is_granted("ROLE_ADMIN")'))]
 final class AdminController extends AbstractController
 {
-    public function __invoke(): Response {
+    public function __invoke(): Response
+    {
         return $this->json([
             'is_admin' => $this->isGranted('ROLE_ADMIN'),
         ]);
