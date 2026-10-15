@@ -36,7 +36,7 @@
                         {% if app.user %}
                             <li class="nav-item"><a class="nav-link" href="{{ path('app_profile') }}">👤 User profile</a></li>
                             {% if is_granted('ROLE_ADMIN') %}
-                                <li class="nav-item"><a class="nav-link" href="{{ path('app_admin') }}">⚙️ Admin panel</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{{ path('admin') }}">⚙️ Admin panel</a></li>
                             {% endif %}
                             <li class="nav-item"><a class="nav-link" href="{{ logout_path() }}" data-turbo-prefetch="false">🚪 Logout</a></li>
                         {% endif %}

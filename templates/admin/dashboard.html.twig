@@ -1,6 +1,4 @@
-{% extends 'base.html.twig' %}
-
-{% block title %}Admin panel{% endblock %}
+{% extends '@EasyAdmin/layout.html.twig' %}
 
 {% block main %}
     <div class="row justify-content-center">
@@ -22,13 +20,8 @@
                         This admin panel is a protected resource that only users with administrator role can access.
                     </p>
 
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
-                        <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary btn-lg">
-                            ← Back to profile
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
+{% endblock main %}
