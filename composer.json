@@ -73,6 +73,7 @@
         "symfony/polyfill-php81": "*"
     },
     "scripts": {
+        "build-wasm": "@php bin/build-wasm",
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd",
@@ -96,6 +97,7 @@
         }
     },
     "require-dev": {
+        "amphp/http-client": "^5.3.6",
         "php-cs-fixer/shim": "^3.95.27",
         "phpstan/phpstan": "^2.3.1",
         "phpstan/phpstan-symfony": "^2.1",
