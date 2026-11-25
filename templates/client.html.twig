@@ -24,8 +24,8 @@
                         </div>
                         <div class="card-body">
                             <h5 class="mb-3">Create OAuth2 Client</h5>
-                            <p>Before testing, you need to create an OAuth2 client using the following command:</p>
-                            <pre class="bg-dark text-light p-3 rounded"><code>bin/console league:oauth2-server:create-client "Test Client" \
+                            <p>Before testing, you need to create an OAuth2 client, if not already created, using the following command:</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code>bin/console league:oauth2-server:create-client \
     --redirect-uri={{ url('app_client') }} \
     --grant-type=authorization_code \
     --grant-type=implicit \
@@ -34,7 +34,8 @@
     --grant-type=urn:ietf:params:oauth:grant-type:device_code \
     --grant-type=refresh_token \
     --scope=email \
-    --scope=profile</code></pre>
+    --scope=profile \
+    "Test Client" test foobar</code></pre>
                             <p class="mb-2"><strong>This will output:</strong></p>
                             <ul>
                                 <li><strong>Client ID:</strong> Copy this to the "Client ID" field below</li>
@@ -53,12 +54,12 @@
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label for="clientId" class="form-label">Client ID:</label>
-                                    <input id="clientId" type="text" class="form-control form-control-lg" required {{ stimulus_target('client', 'clientId') }}>
+                                    <input id="clientId" value="test" type="text" class="form-control form-control-lg" required {{ stimulus_target('client', 'clientId') }}>
                                 </div>
 
                                 <div class="col-md-6 mb-3">
                                     <label for="clientSecret" class="form-label">Client Secret:</label>
-                                    <input id="clientSecret" type="password" class="form-control form-control-lg" required {{ stimulus_target('client', 'clientSecret') }}>
+                                    <input id="clientSecret" value="foobar" type="password" class="form-control form-control-lg" required {{ stimulus_target('client', 'clientSecret') }}>
                                 </div>
                             </div>
 

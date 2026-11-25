@@ -6,7 +6,7 @@ league_oauth2_server:
         enable_password_grant: true
         enable_implicit_grant: true
         enable_device_code_grant: true
-        device_code_verification_uri: '/oauth2/device-verify'
+        device_code_verification_uri: '%env(resolve:OAUTH_DEVICE_CODE_VERIFICATION_URI)%'
     resource_server:
         public_key: '%env(resolve:OAUTH_PUBLIC_KEY)%'
     scopes:

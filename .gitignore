@@ -1,3 +1,5 @@
+/build/
+/wasm/build/
 
 ###> symfony/framework-bundle ###
 /.env.local

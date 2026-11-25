@@ -1,0 +1,62 @@
+name: Pages
+
+on:
+  workflow_dispatch: ~
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+
+# One deployment at a time, and the one in progress is not cancelled
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+            php-version: '8.2'
+
+      - uses: actions/setup-node@v7
+        with:
+            node-version: 24
+
+      - run: composer install
+
+      # The cache needs the docker-container driver of buildx…
+      - uses: docker/setup-buildx-action@v4
+
+      # …and the runtime token and URLs of GitHub Actions, that only
+      # actions get
+      - uses: crazy-max/ghaction-github-runtime@v4
+
+      # composer wasm:build, with the cache
+      - run: |
+          composer wasm:embed
+          docker buildx bake --set '*.cache-from=type=gha' --set '*.cache-to=type=gha,mode=max,ignore-error=true'
+          chmod 755 wasm/build
+
+      - run: composer wasm:check
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: wasm
+  # A separate job: in the same job, deploy-pages listed the artifacts right
+  # after the upload and sometimes found none
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
