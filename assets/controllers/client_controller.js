@@ -115,11 +115,12 @@ export default class extends Controller {
     saveCredentials() {
         sessionStorage.setItem('oauth2_client_id', this.clientIdTarget.value.trim());
         sessionStorage.setItem('oauth2_client_secret', this.clientSecretTarget.value.trim());
-        sessionStorage.setItem('oauth2_server_url', this.getServerUrl());
+        sessionStorage.setItem('oauth2_server_url', this.getServerUrl().toString());
     }
 
-    getServerUrl() {
-        return window.location.origin;
+    getServerUrl(withPath = '/') {
+        const baseUrl = new URL('./', window.location.href);
+        return new URL(withPath.replace(/^\/+/, ''), baseUrl);
     }
 
     getScopes() {
@@ -265,8 +266,7 @@ export default class extends Controller {
         this.deviceCountdownTarget.innerHTML = '';
 
         this.deviceResultTarget.innerHTML = '<p>⏳ Requesting device authorization...</p>';
-        const deviceUrl = new URL(this.getServerUrl());
-        deviceUrl.pathname = '/oauth2/device-code';
+        const deviceUrl = this.getServerUrl('/oauth2/device-code');
 
         const body = new URLSearchParams();
         body.append('client_id', this.clientIdTarget.value.trim());
@@ -337,8 +337,7 @@ export default class extends Controller {
     }
 
     buildAuthorizationUrl(options = {}) {
-        const authUrl = new URL(this.getServerUrl());
-        authUrl.pathname = '/oauth2/authorize';
+        const authUrl = this.getServerUrl('/oauth2/authorize');
         authUrl.searchParams.append('client_id', this.clientIdTarget.value.trim());
         authUrl.searchParams.append('response_type', options.responseType);
         authUrl.searchParams.append('redirect_uri', this.getRedirectUri());
@@ -360,8 +359,7 @@ export default class extends Controller {
 
         this.saveCredentials();
 
-        const tokenUrl = new URL(this.getServerUrl());
-        tokenUrl.pathname = '/oauth2/token';
+        const tokenUrl = this.getServerUrl('/oauth2/token');
 
         const body = new URLSearchParams();
         body.append('grant_type', 'password');
@@ -387,8 +385,7 @@ export default class extends Controller {
 
         this.saveCredentials();
 
-        const tokenUrl = new URL(this.getServerUrl());
-        tokenUrl.pathname = '/oauth2/token';
+        const tokenUrl = this.getServerUrl('/oauth2/token');
 
         const body = new URLSearchParams();
         body.append('grant_type', 'client_credentials');
@@ -464,8 +461,7 @@ export default class extends Controller {
             return;
         }
 
-        const tokenUrl = new URL(this.getServerUrl());
-        tokenUrl.pathname = '/oauth2/token';
+        const tokenUrl = this.getServerUrl('/oauth2/token');
 
         const body = new URLSearchParams();
         body.append('grant_type', 'urn:ietf:params:oauth:grant-type:device_code');
@@ -544,18 +540,18 @@ export default class extends Controller {
         // Detener polling y cuenta atrás
         this.clearDevicePolling();
         this.clearDeviceCountdown();
-        
+
         // Limpiar estado de autorización
         this.deviceAuthorizationData = null;
         this.deviceAuthorizationIntervalMs = 5000;
         this.deviceAuthorizationExpiresAt = null;
-        
+
         // Mostrar mensaje de error
         this.deviceResultTarget.innerHTML = `<div class="alert alert-danger mb-0"><strong>${this.escapeHtml(title)}</strong><br>${this.escapeHtml(message)}</div>`;
         this.deviceInstructionsTarget.innerHTML = '';
         this.deviceCountdownTarget.innerHTML = '';
         this.deviceStatusTarget.innerHTML = '';
-        
+
         // Deshabilitar botón de cancelar
         if (this.hasDeviceCancelButtonTarget) {
             this.deviceCancelButtonTarget.disabled = true;
@@ -705,8 +701,7 @@ export default class extends Controller {
     }
 
     exchangeCodeForToken(code) {
-        const tokenUrl = new URL(this.getServerUrl());
-        tokenUrl.pathname = '/oauth2/token';
+        const tokenUrl = this.getServerUrl('/oauth2/token');
 
         const body = new URLSearchParams();
         body.append('grant_type', 'authorization_code');
@@ -728,7 +723,7 @@ export default class extends Controller {
 
     exchangeCodeForTokenPkce(code, codeVerifier) {
         const tokenUrl = new URL(sessionStorage.getItem('oauth2_server_url') || window.location.origin);
-        tokenUrl.pathname = '/oauth2/token';
+        tokenUrl.pathname += '/oauth2/token';
 
         const body = new URLSearchParams();
         body.append('grant_type', 'authorization_code');
@@ -881,19 +876,19 @@ export default class extends Controller {
     }
 
     testEmailApi() {
-        this.testApi(`${this.getServerUrl()}/api/email`);
+        this.testApi(this.getServerUrl('/api/email'));
     }
 
     testProfileApi() {
-        this.testApi(`${this.getServerUrl()}/api/profile`);
+        this.testApi(this.getServerUrl('/api/profile'));
     }
 
     testClientApi() {
-        this.testApi(`${this.getServerUrl()}/api/client`);
+        this.testApi(this.getServerUrl('/api/client'));
     }
 
     testAdminApi() {
-        this.testApi(`${this.getServerUrl()}/api/admin`);
+        this.testApi(this.getServerUrl('/api/admin'));
     }
 
     testApi(endpoint) {
@@ -952,8 +947,7 @@ export default class extends Controller {
             return;
         }
 
-        const tokenUrl = new URL(this.getServerUrl());
-        tokenUrl.pathname = '/oauth2/token';
+        const tokenUrl = this.getServerUrl('/oauth2/token');
 
         const body = new URLSearchParams();
         body.append('grant_type', 'refresh_token');

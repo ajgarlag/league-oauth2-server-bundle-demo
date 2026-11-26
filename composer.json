@@ -51,6 +51,9 @@
             "symfony/flex": true,
             "symfony/runtime": true
         },
+        "platform": {
+            "php": "8.2.36"
+        },
         "sort-packages": true
     },
     "autoload": {
@@ -83,6 +86,21 @@
         ],
         "post-update-cmd": [
             "@auto-scripts"
+        ],
+        "wasm:build": [
+            "@wasm:embed",
+            "docker buildx bake",
+            "chmod 755 wasm/build"
+        ],
+        "wasm:embed": [
+            "rm -rf build/embed && mkdir -p build/embed && cp -R assets bin config migrations public src templates translations .env .env.dev composer.json composer.lock importmap.php build/embed/ && cp .env.wasm-builder build/embed/.env.local",
+            "@composer install --working-dir=build/embed --classmap-authoritative"
+        ],
+        "wasm:check": [
+            "node vendor/lyrixx/php-wasm-builder/node/run.mjs --build wasm/build/php-web.mjs -r 'echo \"OK\";'"
+        ],
+        "wasm:serve": [
+            "@php -S localhost:8000 -t wasm"
         ]
     },
     "conflict": {
@@ -96,6 +114,7 @@
         }
     },
     "require-dev": {
+        "lyrixx/php-wasm-builder": "^1.0",
         "php-cs-fixer/shim": "^3.95.27",
         "phpstan/phpstan": "^2.3.1",
         "phpstan/phpstan-symfony": "^2.1",

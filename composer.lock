@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "428ba90aa7ddf55b69604581e350f757",
+    "content-hash": "63b1eecebcbd0d61ee0132a16ea03119",
     "packages": [
         {
             "name": "composer/semver",
@@ -9031,6 +9031,52 @@
     ],
     "packages-dev": [
         {
+            "name": "lyrixx/php-wasm-builder",
+            "version": "v1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/lyrixx/php-wasm-builder.git",
+                "reference": "501310f805aa505c140ef957865da58c80ccceb6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/lyrixx/php-wasm-builder/zipball/501310f805aa505c140ef957865da58c80ccceb6",
+                "reference": "501310f805aa505c140ef957865da58c80ccceb6",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions-internal.php",
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "PhpWasm\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Builds PHP as WebAssembly: a Dockerfile, and a castor function to build stacks (a PHP version, extensions, what to embed) with one command",
+            "keywords": [
+                "castor",
+                "emscripten",
+                "php",
+                "wasm",
+                "webassembly"
+            ],
+            "support": {
+                "issues": "https://github.com/lyrixx/php-wasm-builder/issues",
+                "source": "https://github.com/lyrixx/php-wasm-builder/tree/v1.0.1"
+            },
+            "time": "2026-11-24T21:57:17+00:00",
+            "published-time": "2026-11-24T21:57:23+00:00"
+        },
+        {
             "name": "masterminds/html5",
             "version": "2.11.0",
             "source": {
@@ -11579,5 +11625,5 @@
         "ext-iconv": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
