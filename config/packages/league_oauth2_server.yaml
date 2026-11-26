@@ -14,9 +14,6 @@ league_oauth2_server:
         default: ['email']
     persistence:
         doctrine: null
-    client:
-        # Store client secrets hashed. Set to true only to keep supporting legacy plaintext secrets.
-        allow_plaintext_secrets: false
 
 when@test:
     league_oauth2_server:
